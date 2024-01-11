@@ -8,12 +8,8 @@ let doorList: Door[] = [];
 on("onClientResourceStart", (name: string) => {
   if (name != GetCurrentResourceName()) return;
 
-  fetchDoors();
+  emitNet("doors:fetch");
 });
-
-function fetchDoors(): void {
-  emitNet("doors:fetch", -1);
-}
 
 onNet("doors:update", (doors: Door[]) => {
   doorList = doors;
@@ -40,11 +36,11 @@ on("doors:setSystemDoorState", (id: string, state: DoorState) => {
 });
 
 function getNearestDoor(): [boolean, Door | undefined] {
-  const [x, y, z] = GetEntityCoords(PlayerPedId(), false);
-  function predicate(value: Door, index: number) {
-    const [ox, oy, oz] = value.coords;
-    const dist = Vdist(x, y, z, ox, oy, oz);
-    return dist < value.maxDist;
+  const [px, py, pz] = GetEntityCoords(PlayerPedId(), false);
+  function predicate(door: Door) {
+    const [dx, dy, dz] = door.coords;
+    const dist = Vdist(px, py, pz, dx, dy, dz);
+    return dist < door.maxDist;
   }
   const nearDoor = doorList.some(predicate);
   const nearestDoor = doorList.find(predicate);
@@ -76,15 +72,17 @@ async function playDoorAnim(): Promise<void> {
   );
 }
 
-setTick(() => {
+setTick(async () => {
   const [isNearDoor, nearestDoor] = getNearestDoor();
   if (isNearDoor) {
     if (nearestDoor.showPrompt) {
       showInteractMessage(`${nearestDoor.isLocked ? "Unlock" : "Lock"} Door`);
     }
     if (IsControlJustReleased(0, 38)) {
-      playDoorAnim();
+      await playDoorAnim();
       emitNet("doors:setLockState", nearestDoor.id, !nearestDoor.isLocked);
     }
+  } else {
+    await delay(500);
   }
 });

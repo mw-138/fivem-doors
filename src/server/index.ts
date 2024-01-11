@@ -6,8 +6,8 @@ function getDoorFromId(id: string): Door {
   return Doors.find((door) => door.id === id);
 }
 
-onNet("doors:fetch", (src: number) => {
-  emitNet("doors:update", src, Doors);
+onNet("doors:fetch", () => {
+  emitNet("doors:update", source, Doors);
 });
 
 onNet("doors:setLockState", (id: string, state: boolean) => {
