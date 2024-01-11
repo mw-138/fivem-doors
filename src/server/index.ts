@@ -1,9 +1,28 @@
-import cfg from "@@/.config/config.json";
-export type Config = typeof cfg;
+import { Doors } from "./doors";
+import Door from "@common/door";
+import { DoorState } from "@common/doorState";
 
-on("onResourceStart", (name: string) => {
-    if(name != GetCurrentResourceName()) return;
+function getDoorFromId(id: string): Door {
+  return Doors.find((door) => door.id === id);
+}
 
-    console.log("Starting resource...");
-    console.log("Name " + cfg.Name);
+onNet("doors:fetch", (src: number) => {
+  emitNet("doors:update", src, Doors);
+});
+
+onNet("doors:setLockState", (id: string, state: boolean) => {
+  const door = getDoorFromId(id);
+  if (door === undefined) {
+    return;
+  }
+  door.isLocked = !door.isLocked;
+  getPlayers().forEach((player) => {
+    emitNet(
+      "doors:setLockState",
+      player,
+      id,
+      door.isLocked ? DoorState.LOCKED : DoorState.UNLOCKED
+    );
+    emitNet("doors:update", player, Doors);
+  });
 });
